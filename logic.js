@@ -1,21 +1,6 @@
-// Store our API endpoint inside queryUrl
-var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
 
-// Perform a GET request to the query URL
-d3.json(queryUrl, function(data) {
-  // Once we get a response, send the data.features object to the createFeatures function
-    // Define a function we want to run once for each feature in the features array
-  // Give each feature a popup describing the place and time of the earthquake
-  
-  // Create a GeoJSON layer containing the features array on the earthquakeData object
-  // Run the onEachFeature function once for each piece of data in the array
-  
-  // Sending our earthquakes layer to the createMap function
-  // Two arrays
- 
-  var features = data.features;
-  // Load the arrays with markers
- function getColor(mag)
+//Load the arrays with markers
+function getColor(mag)
       { 
           switch(parseInt( mag)){
               case 0: return '#b7f34d';
@@ -26,7 +11,9 @@ d3.json(queryUrl, function(data) {
               default: return '#f06b6b';
           }
       }
-  var earthquakes = L.geoJSON(features, {
+// Store our API endpoint inside queryUrl
+var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
+var earthquakes = L.geoJSON([], {
     pointToLayer: function (feature, latlng) {
         return L.circleMarker(latlng, {
       stroke: false,
@@ -44,15 +31,35 @@ d3.json(queryUrl, function(data) {
                               "</h3><p>" + new Date(layer.feature.properties.time) + "</p>"
                               );
                           });
-    
+ 
+d3.json(queryUrl,function(data){
+ // get the earthquake data from api
+  // var features=data.features; 
+  earthquakes.addData(data.features);
+    });                          
+  
+
+// Add the fault line layer to the map
+var faultLine_url = "https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json"
+var faultLine = L.geoJSON([],{
+                            style: function (feature) {
+                                return {color: 'orange',fill:false,weight :2};
+                            }
+                        }).bindPopup(function (layer) {
+                            return layer.feature.properties.description;
+                        });
+d3.json(faultLine_url,function(data){
+          
+          faultLine.addData(data.features);
+    });
+
+
   // Define streetmap and darkmap layers
   var streetmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/outdoors-v10/tiles/256/{z}/{x}/{y}?" +
-    "access_token=pk.eyJ1Ijoia2pnMzEwIiwiYSI6ImNpdGRjbWhxdjAwNG0yb3A5b21jOXluZTUifQ." +
-    "T6YbdDixkOBWH_k9GbS8JQ");
+    "access_token=pk.eyJ1IjoiZGVzaGFueXUiLCJhIjoiY2puMGpveTBrMXp5bzNrbm84YWdwbG9lZyJ9.nmp8PpvgZjsvect2mcN5Jg");
 
   var darkmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/dark-v9/tiles/256/{z}/{x}/{y}?" +
-    "access_token=pk.eyJ1Ijoia2pnMzEwIiwiYSI6ImNpdGRjbWhxdjAwNG0yb3A5b21jOXluZTUifQ." +
-    "T6YbdDixkOBWH_k9GbS8JQ");
+    "access_token=pk.eyJ1IjoiZGVzaGFueXUiLCJhIjoiY2puMGpveTBrMXp5bzNrbm84YWdwbG9lZyJ9.nmp8PpvgZjsvect2mcN5Jg");
 
   // Define a baseMaps object to hold our base layers
   var baseMaps = {
@@ -63,7 +70,8 @@ d3.json(queryUrl, function(data) {
   // var earthquakes = L.geoJSON(earthquakeMarkers[0]);
   // Create overlay object to hold our overlay layer
   var overlayMaps = {
-    Earthquakes: earthquakes
+    Earthquakes: earthquakes,
+    Faultlines: faultLine
   };
 
   // Create our map, giving it the streetmap and earthquakes layers to display on load
@@ -72,7 +80,7 @@ d3.json(queryUrl, function(data) {
       37.09, -95.71
     ],
     zoom: 5,
-    layers: [streetmap, earthquakes]
+    layers: [streetmap, earthquakes, faultLine]
   });
 
   // Create a layer control
@@ -81,8 +89,31 @@ d3.json(queryUrl, function(data) {
   L.control.layers(baseMaps, overlayMaps, {
     collapsed: false
   }).addTo(myMap);
-});
 
+  CreateLegend();
+    
 
+    function CreateLegend()
+    {
+    var legend = L.control({ position: "bottomright" });
 
+    legend.onAdd = function() {
+      var div = L.DomUtil.create("div", "info legend");
+      var labels = ["0-1","1-2","2-3","3-4","4-5","5+"];  
+      var legends = [];
+      //div.innerHTML = legendInfo;
+  
+      for(var i=0;i<labels.length;i++) {
+        legends.push("<li style=\"list-style-type:none;\"><div style=\"background-color: " + getColor(i) + "\">&nbsp;</div> "+
+                                                         "<div>"+ labels[i]+"</div></li>");
+      }
+  
+      div.innerHTML += "<ul class='legend'>" + legends.join("") + "</ul>";
+      return div;
+    };
+  
+    // Adding legend to the map
+    legend.addTo(myMap);
+    }
 
+ 
